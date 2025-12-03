@@ -1,7 +1,9 @@
-<Solution>
+﻿<Solution>
   <Configurations>
     <Platform Name="x64" />
   </Configurations>
   <Project Path="AoC_2025_Day1/AoC_2025_Day1.vcxproj" Id="fee194d0-fd7d-45a1-9bb8-6111c6180c19" />
   <Project Path="AoC_2025_Day1_Test/AoC_2025_Day1_Test.vcxproj" />
+  <Project Path="AoC_2025_Day2/AoC_2025_Day2.vcxproj" />
+  <Project Path="AoC_2025_Day2_Test/AoC_2025_Day2_Test.vcxproj" />
 </Solution>
