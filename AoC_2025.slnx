@@ -8,4 +8,6 @@
   <Project Path="AoC_2025_Day2_Test/AoC_2025_Day2_Test.vcxproj" />
   <Project Path="AoC_2025_Day3/AoC_2025_Day3.vcxproj" />
   <Project Path="AoC_2025_Day3_Test/AoC_2025_Day3_Test.vcxproj" />
+  <Project Path="AoC_2025_Day4/AoC_2025_Day4.vcxproj" />
+  <Project Path="AoC_2025_Day4_Test/AoC_2025_Day4_Test.vcxproj" />
 </Solution>
