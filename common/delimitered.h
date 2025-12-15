@@ -3,15 +3,39 @@
 import std;
 
 #include "stream_required.h"
+#include "unwrap.h"
 
 template<typename T, char sep = ','>
 struct delimitered_value
 {
 	T value;
 
-	operator const T& () const { return value; }
-	operator T && ()&& { return std::move(value); }
+	operator unwrap_result_t<T>()&&     { return unwrap(std::move(value)); }
+	operator unwrap_result_t<T>()const& { return unwrap(value); }
+	operator unwrap_result_t<T>()&      { return unwrap(value); }
 };
+
+template<typename T, char sep>
+struct unwrap_result<delimitered_value<T, sep>>
+{
+	using type = unwrap_result_t<T>;
+};
+
+template<typename T, char sep>
+inline unwrap_result_t<T> unwrap(delimitered_value<T, sep>&& t)
+{
+	return unwrap(std::move(t.value));
+}
+template<typename T, char sep>
+inline unwrap_result_t<T>& unwrap(delimitered_value<T, sep>& t)
+{
+	return unwrap(t.value);
+}
+template<typename T, char sep>
+inline unwrap_result_t<T>const& unwrap(delimitered_value<T, sep>const& t)
+{
+	return unwrap(t.value);
+}
 
 template<typename T, char sep>
 std::istream& operator>>(std::istream& in, delimitered_value<T, sep>& t)
@@ -63,11 +87,34 @@ struct delimitered_container
 {
 	T value;
 
-	operator const T& () const& { return value; }
-	operator T&& () && { return std::move(value); }
-	operator remove_delimitered<T>::type() const& requires !std::same_as<T, remove_delimitered<T>::type> { return value; }
-	operator remove_delimitered<T>::type() && requires !std::same_as<T, remove_delimitered<T>::type> { return std::move(value); }
+	operator unwrap_result_t<T>()&&     { return unwrap(std::move(value)); }
+	operator unwrap_result_t<T>()const& { return unwrap(value); }
+	operator unwrap_result_t<T>()&      { return unwrap(value); }
+	operator remove_delimitered<T>::type() const& requires !std::same_as<unwrap_result_t<T>, remove_delimitered<T>::type> { return value; }
+	operator remove_delimitered<T>::type() &&     requires !std::same_as<unwrap_result_t<T>, remove_delimitered<T>::type> { return std::move(value); }
 };
+
+template<typename T, char sep>
+struct unwrap_result<delimitered_container<T, sep>>
+{
+	using type = T;
+};
+
+template<typename T, char sep>
+inline unwrap_result_t<T>&& unwrap(delimitered_container<T, sep>&& t)
+{
+	return unwrap(std::move(t.value));
+}
+template<typename T>
+inline unwrap_result_t<T>& unwrap(delimitered_container<T>& t)
+{
+	return unwrap(t.value);
+}
+template<typename T>
+inline unwrap_result_t<T>const& unwrap(delimitered_container<T>const& t)
+{
+	return unwrap(t.value);
+}
 
 template<typename T, typename U, char sep>
 std::istream& operator>>(std::istream& in, delimitered_container<std::pair<T,U>, sep>& t)

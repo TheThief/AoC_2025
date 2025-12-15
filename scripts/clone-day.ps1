@@ -38,8 +38,12 @@ if (Test-Path $dstDir) {
     exit 1
 }
 
-Write-Output "Copying '$srcDir' -> '$dstDir'..."
-Copy-Item -LiteralPath $srcDir -Destination $dstDir -Recurse -Force
+Write-Output "Creating '$dstDir' and copying top-level files from '$srcDir'..."
+# Create destination directory and copy only files directly in the source directory (non-recursive)
+New-Item -ItemType Directory -Path $dstDir -Force | Out-Null
+Get-ChildItem -LiteralPath $srcDir -File -Force | ForEach-Object {
+    Copy-Item -LiteralPath $_.FullName -Destination $dstDir -Force
+}
 
 $copiedTest = $false
 if (Test-Path $srcTestDir) {
@@ -47,8 +51,11 @@ if (Test-Path $srcTestDir) {
         Write-Error "Target test directory '$dstTestDir' already exists. Remove it or choose a different target."
         exit 1
     }
-    Write-Output "Copying test '$srcTestDir' -> '$dstTestDir'..."
-    Copy-Item -LiteralPath $srcTestDir -Destination $dstTestDir -Recurse -Force
+    Write-Output "Creating '$dstTestDir' and copying top-level files from '$srcTestDir'..."
+    New-Item -ItemType Directory -Path $dstTestDir -Force | Out-Null
+    Get-ChildItem -LiteralPath $srcTestDir -File -Force | ForEach-Object {
+        Copy-Item -LiteralPath $_.FullName -Destination $dstTestDir -Force
+    }
     $copiedTest = $true
 } else {
     Write-Output "No test directory found at '$srcTestDir'. Skipping test project copy."
@@ -65,28 +72,19 @@ $replacements = @(
     @{ Old = "Day$SourceDay";             New = "Day$TargetDay" }
 )
 
-# Update contents of copied project(s)
-Get-ChildItem -LiteralPath $dstDir -Recurse -File -Force | ForEach-Object {
+# Update contents of copied project(s) — only files directly in the destination directories (non-recursive)
+Get-ChildItem -LiteralPath $dstDir -File -Force | ForEach-Object {
     Replace-InFile -Path $_.FullName -Replacements $replacements
 }
 if ($copiedTest) {
-    Get-ChildItem -LiteralPath $dstTestDir -Recurse -File -Force | ForEach-Object {
+    Get-ChildItem -LiteralPath $dstTestDir -File -Force | ForEach-Object {
         Replace-InFile -Path $_.FullName -Replacements $replacements
     }
 }
 
-# Rename directories and files that include the source day number (deepest-first)
-$dirs = @(Get-ChildItem -LiteralPath $dstDir -Recurse -Directory -Force)
-if ($copiedTest) { $dirs += @(Get-ChildItem -LiteralPath $dstTestDir -Recurse -Directory -Force) }
-$dirs | Sort-Object -Property FullName -Descending | ForEach-Object {
-    if ($_.Name -match [regex]::Escape("$SourceDay")) {
-        $newName = $_.Name -replace [regex]::Escape("$SourceDay"), "$TargetDay"
-        Rename-Item -LiteralPath $_.FullName -NewName $newName
-    }
-}
-
-$files = @(Get-ChildItem -LiteralPath $dstDir -Recurse -File -Force)
-if ($copiedTest) { $files += @(Get-ChildItem -LiteralPath $dstTestDir -Recurse -File -Force) }
+# Rename destination files that include the source day number (non-recursive)
+$files = @(Get-ChildItem -LiteralPath $dstDir -File -Force)
+if ($copiedTest) { $files += @(Get-ChildItem -LiteralPath $dstTestDir -File -Force) }
 $files | Sort-Object -Property FullName -Descending | ForEach-Object {
     if ($_.Name -match [regex]::Escape("$SourceDay")) {
         $newName = $_.Name -replace [regex]::Escape("$SourceDay"), "$TargetDay"
@@ -94,15 +92,15 @@ $files | Sort-Object -Property FullName -Descending | ForEach-Object {
     }
 }
 
-# Rename .vcxproj files if they include the day
-foreach ($proj in (Get-ChildItem -LiteralPath $dstDir -Recurse -Filter "*.vcxproj" -File -ErrorAction SilentlyContinue)) {
+# Rename .vcxproj files if they include the day — only in the top-level of the destination project directories
+foreach ($proj in (Get-ChildItem -LiteralPath $dstDir -Filter "*.vcxproj" -File -ErrorAction SilentlyContinue)) {
     if ($proj.Name -match [regex]::Escape("$SourceDay")) {
         $newName = $proj.Name -replace [regex]::Escape("$SourceDay"), "$TargetDay"
         Rename-Item -LiteralPath $proj.FullName -NewName $newName
     }
 }
 if ($copiedTest) {
-    foreach ($proj in (Get-ChildItem -LiteralPath $dstTestDir -Recurse -Filter "*.vcxproj" -File -ErrorAction SilentlyContinue)) {
+    foreach ($proj in (Get-ChildItem -LiteralPath $dstTestDir -Filter "*.vcxproj" -File -ErrorAction SilentlyContinue)) {
         if ($proj.Name -match [regex]::Escape("$SourceDay")) {
             $newName = $proj.Name -replace [regex]::Escape("$SourceDay"), "$TargetDay"
             Rename-Item -LiteralPath $proj.FullName -NewName $newName
