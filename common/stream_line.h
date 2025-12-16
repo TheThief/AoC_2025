@@ -91,9 +91,9 @@ struct line<std::vector<T>>
 		return is;
 	}
 
-	operator std::vector<T>&       ()&      { return data; }
-	operator std::vector<T>&&      ()&&     { return std::move(data); }
-	operator std::vector<T> const& () const { return data; }
+	operator unwrap_result_t<std::vector<T>>()&&     { return unwrap(std::move(data)); }
+	operator unwrap_result_t<std::vector<T>>()const& { return unwrap(data); }
+	operator unwrap_result_t<std::vector<T>>()&      { return unwrap(data); }
 
 	// casting operators
 	template<typename U>
