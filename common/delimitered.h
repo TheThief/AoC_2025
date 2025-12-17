@@ -131,7 +131,7 @@ std::istream& operator>>(std::istream& is, delimitered_container<std::vector<T, 
 	{
 		auto pos = is.tellg();
 		std::stringbuf next;
-		if(!is.get(next, sep))   //if we failed to read the value
+		if(!is.get(next, sep)) //if we failed to read the value
 		{
 			return is;          //return failure state (stream may not be in a consistent state, can't rewind)
 		}
@@ -141,20 +141,57 @@ std::istream& operator>>(std::istream& is, delimitered_container<std::vector<T, 
 		{
 			is.seekg(pos);
 			is.setf(std::ios_base::failbit);
-			return is;          //return failure state (stream may not be in a consistent state, can't rewind)
+			return is;          //return failure state
 		}
 		t.value.push_back(std::move(value));
 		is2 >> std::ws;
-		if (is2.eof()) //if next character matches the separator
+		if (is2.eof())         //if next character matches the separator
 		{
 			if (is.eof())
 				break;
 			is.ignore();        //extract it from the stream and loop round
 			continue;
 		}
-		else                  //if the next character is anything else
+		else                   //if the next character is anything else
 		{
 			is.clear();         //clear the EOF state, read was successful
+			is.seekg(pos + is2.tellg());
+			break;
+		}
+	}
+	return is;
+}
+
+template<typename T, size_t count, char sep>
+std::istream& operator>>(std::istream& is, delimitered_container<std::array<T, count>, sep>& t)
+{
+	for (size_t i = 0; i < count; ++i)
+	{
+		auto pos = is.tellg();
+		std::stringbuf next;
+		if (!is.get(next, sep)) //if we failed to read the value
+		{
+			return is;           //return failure state (stream may not be in a consistent state, can't rewind)
+		}
+		std::istream is2(&next);
+		T value;
+		if (!(is2 >> value))    //if we failed to read the value
+		{
+			is.seekg(pos);
+			is.setf(std::ios_base::failbit);
+			return is;           //return failure state
+		}
+		t.value[i] = std::move(value);
+		is2 >> std::ws;
+		if (is2.eof())          //if next character matches the separator
+		{
+			if (!is.eof())
+				is.ignore();     //extract it from the stream and loop round
+			continue;
+		}
+		else                    //if the next character is anything else
+		{
+			is.clear();          //clear the EOF state, read was successful
 			is.seekg(pos + is2.tellg());
 			break;
 		}
@@ -167,3 +204,6 @@ using delimitered_pair = delimitered_container<std::pair<T, U>, sep>;
 
 template<typename T, char sep = ',', typename Alloc=std::allocator<T>>
 using delimitered_vector = delimitered_container<std::vector<T, Alloc>, sep>;
+
+template<typename T, size_t count, char sep = ','>
+using delimitered_array = delimitered_container<std::array<T, count>, sep>;
