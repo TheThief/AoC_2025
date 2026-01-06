@@ -127,6 +127,7 @@ std::istream& operator>>(std::istream& in, delimitered_container<std::pair<T,U>,
 template<typename T, char sep, typename Alloc = std::allocator<T>>
 std::istream& operator>>(std::istream& is, delimitered_container<std::vector<T, Alloc>, sep>& t)
 {
+	t.value.clear();
 	while(1)
 	{
 		auto pos = is.tellg();
@@ -207,3 +208,81 @@ using delimitered_vector = delimitered_container<std::vector<T, Alloc>, sep>;
 
 template<typename T, size_t count, char sep = ','>
 using delimitered_array = delimitered_container<std::array<T, count>, sep>;
+
+//------------------------------------------------------------
+
+template<typename T, char start = '"', char end = start>
+struct quoted_value
+{
+	T value;
+
+	operator unwrap_result_t<T>()&&     { return unwrap(std::move(value)); }
+	operator unwrap_result_t<T>()const& { return unwrap(value); }
+	operator unwrap_result_t<T>()&      { return unwrap(value); }
+};
+
+template<typename T, char start, char end>
+struct unwrap_result<quoted_value<T, start, end>>
+{
+	using type = unwrap_result_t<T>;
+};
+
+template<typename T, char start, char end>
+inline unwrap_result_t<T> unwrap(quoted_value<T, start, end>&& t)
+{
+	return unwrap(std::move(t.value));
+}
+template<typename T, char start, char end>
+inline unwrap_result_t<T>& unwrap(quoted_value<T, start, end>& t)
+{
+	return unwrap(t.value);
+}
+template<typename T, char start, char end>
+inline unwrap_result_t<T>const& unwrap(quoted_value<T, start, end>const& t)
+{
+	return unwrap(t.value);
+}
+
+template<typename T, char start, char end>
+std::istream& operator>>(std::istream& in, quoted_value<T, start, end>& t)
+{
+	if (!(in >> required{ start })) // read starting quote
+		return in;                   // if we failed, return failure state
+	if (!(in >> t.value))           // read the value
+		return in;                   // if we failed, return failure state
+	if (!(in >> required{ end }))   // read ending quote
+		return in;                   // if we failed, return failure state
+	return in;
+}
+
+template<char start, char end>
+std::istream& operator>>(std::istream& in, quoted_value<std::string, start, end>& t)
+{
+	if (!(in >> required{ start })) // read starting quote
+		return in;                   // if we failed, return failure state
+	std::getline(in, t.value, end); // read until ending quote
+	return in;
+}
+
+template<typename T, char start, char end>
+std::istream& operator>>(std::istream& in, quoted_value<T&, start, end>&& t)
+{
+	if (!(in >> required{ start })) // read starting quote
+		return in;                   // if we failed, return failure state
+	if (!(in >> t.value))           // read the value
+		return in;                   // if we failed, return failure state
+	if (!(in >> required{ end }))   // read ending quote
+		return in;                   // if we failed, return failure state
+	return in;
+}
+
+template<char start, char end>
+std::istream& operator>>(std::istream& in, quoted_value<std::string&, start, end>&& t)
+{
+	if (!(in >> required{ start })) // read starting quote
+		return in;                   // if we failed, return failure state
+	std::getline(in, t.value, end); // read until ending quote
+	return in;
+}
+template<char start = '"', char end = start>
+using quoted_string = quoted_value<std::string, start, end>;
