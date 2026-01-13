@@ -46,7 +46,7 @@ namespace aoc2025::day10
 				[](auto&& m)
 				{
 					return std::ranges::min(
-						std::views::iota(0uz, 1uz << m.buttons.size()) |
+						std::views::iota(1uz, 1uz << m.buttons.size()) |
 						std::views::transform(
 							[&m](size_t button_bits)
 							{
@@ -65,53 +65,53 @@ namespace aoc2025::day10
 			std::plus{});
 	}
 
+	constexpr auto is_positive_even =
+		[](std::integral auto n) constexpr noexcept
+		{
+			return n >= 0 && n % 2 == 0;
+		};
+
+	constexpr auto is_zero =
+		[](std::integral auto n) constexpr noexcept
+		{
+			return n == 0;
+		};
+
 	int min_presses(const std::vector<std::vector<int>>& buttons, std::vector<int> joltages)
 	{
-		auto min_it = std::ranges::min_element(joltages, std::less{},
-			[](int i)
-			{
-				return i != 0 ? i : std::numeric_limits<int>::max();
-			});
-		auto min_index = std::distance(joltages.begin(), min_it);
-		auto min_value = *min_it;
-		if (min_value == 0)
-		{
-			return 0;
-		}
-
-		auto valid_buttons = buttons | std::views::filter(
-			[&joltages, min_index](const auto& button)
-			{
-				return
-					std::ranges::contains(button, min_index) &&
-					std::ranges::all_of(button,
-						[&joltages](int i)
-						{
-							return joltages[i] > 0;
-						});
-			});
-
-		if (std::ranges::empty(valid_buttons))
-		{
-			return std::numeric_limits<int>::max();
-		}
-
 		return std::ranges::min(
-			valid_buttons |
+			std::views::iota(0uz, 1uz << buttons.size()) |
 			std::views::transform(
-				[&](const auto& button)
+				[&](size_t button_bits)
 				{
 					std::vector<int> new_joltages = joltages;
-					for (int j : button)
+					for (size_t remaining = button_bits, button_index = std::countr_zero(remaining); remaining != 0; remaining &= remaining - 1, button_index = std::countr_zero(remaining))
 					{
-						new_joltages[j] -= min_value;
+						for (int joltage_index : buttons[button_index])
+						{
+							--new_joltages[joltage_index];
+							if (new_joltages[joltage_index] < 0)
+							{
+								return std::numeric_limits<int>::max();
+							}
+						}
 					}
-					int presses = min_presses(buttons, new_joltages);
-					if (presses == std::numeric_limits<int>::max())
+
+					if (std::ranges::all_of(new_joltages, is_zero))
 					{
-						return std::numeric_limits<int>::max();
+						return std::popcount(button_bits);
 					}
-					return presses + min_value;
+					else if (std::ranges::all_of(new_joltages, is_positive_even))
+					{
+						std::ranges::for_each(new_joltages, [](int& n) { n /= 2; });
+						int presses = min_presses(buttons, new_joltages);
+						if (presses == std::numeric_limits<int>::max())
+						{
+							return std::numeric_limits<int>::max();
+						}
+						return std::popcount(button_bits) + presses * 2;
+					}
+					return std::numeric_limits<int>::max();
 				}));
 	}
 
@@ -130,8 +130,3 @@ namespace aoc2025::day10
 			std::plus{});
 	}
 }
-
-
-
-
-
