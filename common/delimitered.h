@@ -105,13 +105,13 @@ inline unwrap_result_t<T>&& unwrap(delimitered_container<T, sep>&& t)
 {
 	return unwrap(std::move(t.value));
 }
-template<typename T>
-inline unwrap_result_t<T>& unwrap(delimitered_container<T>& t)
+template<typename T, char sep>
+inline unwrap_result_t<T>& unwrap(delimitered_container<T, sep>& t)
 {
 	return unwrap(t.value);
 }
-template<typename T>
-inline unwrap_result_t<T>const& unwrap(delimitered_container<T>const& t)
+template<typename T, char sep>
+inline unwrap_result_t<T>const& unwrap(delimitered_container<T, sep>const& t)
 {
 	return unwrap(t.value);
 }
@@ -119,7 +119,19 @@ inline unwrap_result_t<T>const& unwrap(delimitered_container<T>const& t)
 template<typename T, typename U, char sep>
 std::istream& operator>>(std::istream& in, delimitered_container<std::pair<T,U>, sep>& t)
 {
-	in >> t.value.first >> required{ sep } >> t.value.second;
+	// slight difference here:
+	// getline potentially doesn't consume sep if there isn't one in the input,
+	// in which case we don't fail until we try to read second value
+	if constexpr (std::same_as<T, std::string>)
+	{
+		in >> std::ws;
+		std::getline(in, t.value.first, sep);
+	}
+	else
+	{
+		in >> t.value.first >> required{ sep };
+	}
+	in >> t.value.second;
 
 	return in;
 }

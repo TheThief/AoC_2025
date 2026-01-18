@@ -1,8 +1,9 @@
 #pragma once
 
-#include "unwrap.h"
-
 import std;
+
+#include "stream_utils.h"
+#include "unwrap.h"
 
 template<typename T>
 struct line
@@ -81,8 +82,7 @@ struct line<std::vector<T>>
 		std::string line_string;
 		std::getline(is, line_string);
 		std::ispanstream ss(line_string);
-		l.data = std::ranges::istream_view<T>(ss) | std::ranges::to<std::vector>();
-		ss >> std::ws;
+		ss >> l.data >> std::ws;
 		if (!ss.eof()) // failed to parse entire line
 		{
 			is.setf(std::ios_base::failbit);
